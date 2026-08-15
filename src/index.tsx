@@ -37,6 +37,11 @@ import { ISharedCell } from '@jupyter/ydoc';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 import {
+  ITranslator,
+  nullTranslator,
+  TranslationBundle
+} from '@jupyterlab/translation';
+import {
   INotebookModel,
   INotebookTracker,
   NotebookPanel
@@ -68,11 +73,7 @@ const log = debug('PYFLYBY:');
 // a run is already in flight on the notebook's single channel; 'timeout' = no
 // reply arrived in time and the in-flight guard was released.
 type TidyImportsStatus =
-  | 'success'
-  | 'interrupted'
-  | 'unavailable'
-  | 'busy'
-  | 'timeout';
+  'success' | 'interrupted' | 'unavailable' | 'busy' | 'timeout';
 type TidyImportsDone = (result: { status: TidyImportsStatus }) => void;
 
 // Last-resort self-heal: if a run never replies (kernel wedged), release the
@@ -175,9 +176,11 @@ class PyflyByWidget extends Widget {
   constructor(
     context: DocumentRegistry.IContext<INotebookModel>,
     _panel: Panel,
-    settingRegistry: ISettingRegistry
+    settingRegistry: ISettingRegistry,
+    trans: TranslationBundle
   ) {
     super();
+    this._trans = trans;
     // get a reference to the settings registry
     settingRegistry.load('@deshaw/jupyterlab-pyflyby:plugin').then(
       (settings: ISettingRegistry.ISettings) => {
@@ -227,17 +230,17 @@ class PyflyByWidget extends Widget {
 
   async _launchDialog(imports: any) {
     /**
-     * Since we are making the first import, create a new dialog
+     * Since we are making the first import, notify the user. `showDialog` owns
+     * the `Dialog` it creates and disposes it once the user dismisses it.
      */
-    const dialog = new Dialog({
-      title: 'PYFLYBY',
-      body: `PYFLYBY will be adding imports to the first code cell in the notebook.
-            To disable the PYFLYBY extension or to disable this notification in future, go
-            to Settings -> Advanced Settings Editor and choose PYFLYBY preferences tab`,
-      buttons: [Dialog.okButton()]
-    });
     try {
-      await dialog.launch();
+      await showDialog({
+        title: this._trans.__('PYFLYBY'),
+        body: this._trans.__(
+          'PYFLYBY will be adding imports to the first code cell in the notebook. To disable the PYFLYBY extension or to disable this notification in future, go to Settings -> Advanced Settings Editor and choose PYFLYBY preferences tab'
+        ),
+        buttons: [Dialog.okButton()]
+      });
       return imports;
     } catch (e) {
       console.error(e);
@@ -523,11 +526,13 @@ class PyflyByWidget extends Widget {
             // interruption notice.
             this._resolvePendingTidy('interrupted');
             await showDialog({
-              title: 'TidyImports Interrupted',
-              body: 'TidyImports could not be run because code in the notebook has been changed',
+              title: this._trans.__('TidyImports Interrupted'),
+              body: this._trans.__(
+                'TidyImports could not be run because code in the notebook has been changed'
+              ),
               buttons: [
                 Dialog.okButton({
-                  label: 'Ok'
+                  label: this._trans.__('Ok')
                 })
               ],
               defaultButton: 0
@@ -553,6 +558,7 @@ class PyflyByWidget extends Widget {
     const targetName = PYFLYBY_COMMS.MISSING_IMPORTS;
     const comm = kernel.createComm(targetName);
     comm.onMsg = this._getCommMsgHandler();
+    this._comms[targetName] = comm;
     try {
       comm.open();
     } catch (e) {
@@ -631,6 +637,7 @@ class PyflyByWidget extends Widget {
 
   private _context: DocumentRegistry.IContext<INotebookModel>;
   private _sessionContext: ISessionContext;
+  private _trans: TranslationBundle;
   private _settings: ISettingRegistry.ISettings | undefined;
   private _comms: any = {};
   private _pendingTidyDone?: TidyImportsDone;
@@ -645,11 +652,12 @@ class PyflyByWidget extends Widget {
  * An extension that adds pyflyby integration to a notebook widget
  */
 class PyflyByWidgetExtension implements DocumentRegistry.WidgetExtension {
-  constructor(settingRegistry: ISettingRegistry) {
+  constructor(settingRegistry: ISettingRegistry, trans: TranslationBundle) {
     // get a reference to the settings registry
     // This is shared between all notebooks. I.e. not possible to
     // have different pyflyby settings for different notebooks
     this._settingRegistry = settingRegistry;
+    this._trans = trans;
     this._loadSettings().catch(console.error);
   }
 
@@ -657,16 +665,22 @@ class PyflyByWidgetExtension implements DocumentRegistry.WidgetExtension {
     try {
       await this._settingRegistry.load('@deshaw/jupyterlab-pyflyby:plugin');
       log('Successfully loaded PYFLYBY extension settings');
-    } catch (e) {
+    } catch {
       console.error('Settings could not be loaded');
     }
   }
 
   createNew(panel: Panel, context: DocumentRegistry.IContext<INotebookModel>) {
-    return new PyflyByWidget(context, panel, this._settingRegistry);
+    return new PyflyByWidget(
+      context,
+      panel,
+      this._settingRegistry,
+      this._trans
+    );
   }
 
   private _settingRegistry: ISettingRegistry;
+  private _trans: TranslationBundle;
 }
 
 async function isPyflybyInstalled() {
@@ -698,22 +712,26 @@ async function disableJupyterlabPyflyby(registry: ISettingRegistry) {
   await registry.reload('@deshaw/jupyterlab-pyflyby:plugin');
 }
 
-const installationBody = (
+// Product name and shell command are deliberately not translated.
+const PYFLYBY_NAME = 'pyflyby';
+const PYFLYBY_INSTALL_COMMAND = '$ py pyflyby.install_in_ipython_config_file';
+
+const installationBody = (trans: TranslationBundle) => (
   <div>
     <p>
-      To use @deshaw/jupyterlab-pyflyby,{' '}
+      {trans.__('To use @deshaw/jupyterlab-pyflyby,')}{' '}
       <a
         href="https://github.com/deshaw/pyflyby/blob/master/README.rst"
         style={{ color: '#0000EE' }}
         target="_blank"
         rel="noopener noreferrer"
       >
-        pyflyby
+        {PYFLYBY_NAME}
       </a>{' '}
-      ipython extension needs to be installed.
+      {trans.__('ipython extension needs to be installed.')}
     </p>
     <br />
-    <p>Clicking on "Install" will run following command</p>
+    <p>{trans.__('Clicking on "Install" will run following command')}</p>
     <div
       style={{
         font: 'monospace',
@@ -722,22 +740,27 @@ const installationBody = (
         marginTop: '5px'
       }}
     >
-      $ py pyflyby.install_in_ipython_config_file
+      {PYFLYBY_INSTALL_COMMAND}
     </div>
     <br />
   </div>
 );
 
-class TidyImportButtonExtension
-  implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel>
-{
+class TidyImportButtonExtension implements DocumentRegistry.IWidgetExtension<
+  NotebookPanel,
+  INotebookModel
+> {
+  constructor(trans: TranslationBundle) {
+    this._trans = trans;
+  }
+
   createNew(
     widget: NotebookPanel,
     context: DocumentRegistry.IContext<INotebookModel>
   ): IDisposable {
     const button = new ToolbarButton({
       className: 'tidy-import-button',
-      tooltip: 'Run tidy-imports on this notebook',
+      tooltip: this._trans.__('Run tidy-imports on this notebook'),
       icon: TidyImportsIcon,
       onClick: () => {
         // Emit a signal with the notebook context
@@ -753,6 +776,8 @@ class TidyImportButtonExtension
       button.dispose();
     });
   }
+
+  private _trans: TranslationBundle;
 }
 
 const TidyImportsIcon = new LabIcon({
@@ -764,17 +789,23 @@ const djsTidyImportsCommand = 'djs:run-tidy-imports';
 
 const extension: JupyterFrontEndPlugin<void> = {
   id: '@deshaw/jupyterlab-pyflyby:plugin',
+  description:
+    'Integrates pyflyby with JupyterLab notebooks: adds missing imports automatically and exposes a tidy-imports command.',
   autoStart: true,
   requires: [ISettingRegistry, INotebookTracker, ICommandPalette],
+  optional: [ITranslator],
   activate: async function (
     app: JupyterFrontEnd,
     registry: ISettingRegistry,
     tracker: INotebookTracker,
-    palette: ICommandPalette
+    palette: ICommandPalette,
+    translator: ITranslator | null
   ): Promise<void> {
     console.log(
       'JupyterLab extension @deshaw/jupyterlab-pyflyby is activated!'
     );
+
+    const trans = (translator ?? nullTranslator).load('jupyterlab-pyflyby');
 
     app.commands.addCommand(djsTidyImportsCommand, {
       execute: args => {
@@ -822,7 +853,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         }
       },
       icon: TidyImportsIcon,
-      label: 'Run tidy-imports on Notebook'
+      label: trans.__('Run tidy-imports on Notebook')
     });
 
     palette.addItem({
@@ -845,19 +876,24 @@ const extension: JupyterFrontEndPlugin<void> = {
           await installPyflyby();
         } else {
           const result = await showDialog({
-            title: 'Installation required',
-            body: installationBody,
+            title: trans.__('Installation required'),
+            body: installationBody(trans),
             buttons: [
               Dialog.okButton({
-                label: 'Install'
+                label: trans.__('Install')
               }),
-              Dialog.cancelButton({ label: 'Cancel', displayType: 'default' })
+              Dialog.cancelButton({
+                label: trans.__('Cancel'),
+                displayType: 'default'
+              })
             ],
             defaultButton: 0
           });
-          result.button.accept
-            ? await installPyflyby()
-            : await disableJupyterlabPyflyby(registry);
+          if (result.button.accept) {
+            await installPyflyby();
+          } else {
+            await disableJupyterlabPyflyby(registry);
+          }
         }
       }
     }
@@ -865,12 +901,12 @@ const extension: JupyterFrontEndPlugin<void> = {
     // Register the extensions
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new PyflyByWidgetExtension(registry)
+      new PyflyByWidgetExtension(registry, trans)
     );
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new TidyImportButtonExtension()
+      new TidyImportButtonExtension(trans)
     );
   }
 };
