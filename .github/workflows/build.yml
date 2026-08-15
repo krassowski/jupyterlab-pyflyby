@@ -44,7 +44,7 @@ jobs:
       uses: jupyterlab/maintainer-tools/.github/actions/base-setup@94b14ddfbdd1ed651e9f9343ae2409ab5c73a6a8 # v1
 
     - name: Install dependencies
-      run: python -m pip install -U "jupyterlab>=4.0.0b0,<5"
+      run: python -m pip install -U "jupyter-builder>=1.2.0,<2"
 
     - name: Lint the extension
       run: |
@@ -60,6 +60,9 @@ jobs:
 
         jupyter server extension list
         jupyter server extension list 2>&1 | grep -ie "jupyterlab_pyflyby.*OK"
+
+        # JupyterLab is only needed to list/verify the installed labextension.
+        python -m pip install "jupyterlab>=4.0.0b0,<5"
 
         jupyter labextension list
         jupyter labextension list 2>&1 | grep -ie "@deshaw/jupyterlab-pyflyby.*OK"

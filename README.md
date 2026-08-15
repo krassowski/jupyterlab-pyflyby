@@ -27,17 +27,17 @@ pip install jupyterlab_pyflyby
 
 Note: You will need NodeJS to build the extension package.
 
-The `jlpm` command is JupyterLab's pinned version of
-[yarn](https://yarnpkg.com/) that is installed with JupyterLab. You may use
-`yarn` or `npm` in lieu of `jlpm` below.
+The `jlpm` command is the pinned version of [yarn](https://yarnpkg.com/) that is
+installed with [`jupyter-builder`](https://github.com/jupyterlab/jupyter-builder).
+You may use `yarn` or `npm` in lieu of `jlpm` below.
 
 ```bash
 # Clone the repo to your local environment
 # Change directory to the jupyterlab_pyflyby directory
-# Install package in development mode
-pip install -e .
+# Install package in development mode, along with the development dependencies
+pip install -e ".[dev]"
 # Link your development version of the extension with JupyterLab
-jupyter-labextension develop . --overwrite
+jupyter-builder develop . --overwrite
 # Rebuild extension Typescript source after making changes
 jlpm run build
 ```

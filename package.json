@@ -27,8 +27,8 @@
   "scripts": {
     "black": "black *.py jupyterlab_pyflyby/**.py",
     "build": "jlpm build:lib && jlpm build:labextension:dev",
-    "build:labextension": "jupyter labextension build .",
-    "build:labextension:dev": "jupyter labextension build --development True .",
+    "build:labextension": "jupyter-builder build .",
+    "build:labextension:dev": "jupyter-builder build --development True .",
     "build:lib": "tsc --sourceMap",
     "build:lib:prod": "tsc",
     "build:prod": "jlpm clean && jlpm build:lib:prod && jlpm build:labextension",
@@ -49,7 +49,7 @@
     "stylelint": "jlpm stylelint:check --fix",
     "stylelint:check": "stylelint --cache \"style/**/*.css\"",
     "watch": "run-p watch:src watch:labextension",
-    "watch:labextension": "jupyter labextension watch .",
+    "watch:labextension": "jupyter-builder watch .",
     "watch:src": "tsc -w"
   },
   "dependencies": {
@@ -71,12 +71,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@jupyter/builder": "^1.2.0",
     "@jupyter/eslint-plugin": "^1.1.0",
-    "@jupyterlab/builder": "^4.0.0",
     "@types/debug": "^4.1.5",
     "@types/json-schema": "^7.0.11",
     "@types/react": "^18.0.26",
-    "css-loader": "^6.7.1",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
@@ -86,8 +85,6 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^3.9.6",
     "rimraf": "^4.4.1",
-    "source-map-loader": "^1.0.2",
-    "style-loader": "^3.3.1",
     "stylelint": "^16.26.1",
     "stylelint-config-recommended": "^17.0.0",
     "stylelint-config-standard": "^39.0.0",
