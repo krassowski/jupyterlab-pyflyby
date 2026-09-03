@@ -570,9 +570,7 @@ class PyflyByWidget extends Widget {
             body: this._trans.__(
               'TidyImports could not be run because code in the notebook has been changed'
             ),
-            buttons: [
-              Dialog.okButton()
-            ],
+            buttons: [Dialog.okButton()],
             defaultButton: 0
           });
         }
