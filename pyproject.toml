@@ -32,6 +32,9 @@ dev = [
     "jupyterlab>=4.0.0,<5",
     "jupyter-builder>=1.2.0,<2",
 ]
+test = [
+    "ipython"
+]
 
 [tool.hatch.version]
 source = "nodejs"

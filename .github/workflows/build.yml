@@ -55,7 +55,7 @@ jobs:
     - name: Build the extension
       run: |
         set -eux
-        python -m pip install .
+        python -m pip install .[test]
         py pyflyby.install_in_ipython_config_file
 
         jupyter server extension list
