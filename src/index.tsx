@@ -571,9 +571,7 @@ class PyflyByWidget extends Widget {
               'TidyImports could not be run because code in the notebook has been changed'
             ),
             buttons: [
-              Dialog.okButton({
-                label: this._trans.__('Ok')
-              })
+              Dialog.okButton()
             ],
             defaultButton: 0
           });
@@ -951,7 +949,6 @@ const extension: JupyterFrontEndPlugin<void> = {
                 label: trans.__('Install')
               }),
               Dialog.cancelButton({
-                label: trans.__('Cancel'),
                 displayType: 'default'
               })
             ],
