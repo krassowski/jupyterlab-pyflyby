@@ -51,6 +51,8 @@ export default defineConfig([
           }
         }
       ],
+      // This extension does not ship translations
+      'jupyter/no-untranslated-string': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { args: 'none' }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-namespace': 'off',

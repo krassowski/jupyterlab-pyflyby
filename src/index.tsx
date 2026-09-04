@@ -37,11 +37,6 @@ import { ISharedCell } from '@jupyter/ydoc';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 import {
-  ITranslator,
-  nullTranslator,
-  TranslationBundle
-} from '@jupyterlab/translation';
-import {
   INotebookModel,
   INotebookTracker,
   NotebookPanel
@@ -186,11 +181,9 @@ class PyflyByWidget extends Widget {
   constructor(
     context: DocumentRegistry.IContext<INotebookModel>,
     _panel: Panel,
-    settingRegistry: ISettingRegistry,
-    trans: TranslationBundle
+    settingRegistry: ISettingRegistry
   ) {
     super();
-    this._trans = trans;
     // get a reference to the settings registry
     settingRegistry.load('@deshaw/jupyterlab-pyflyby:plugin').then(
       (settings: ISettingRegistry.ISettings) => {
@@ -291,10 +284,8 @@ class PyflyByWidget extends Widget {
      */
     try {
       await showDialog({
-        title: this._trans.__('PYFLYBY'),
-        body: this._trans.__(
-          'PYFLYBY will be adding imports to the first code cell in the notebook. To disable the PYFLYBY extension or to disable this notification in future, go to Settings -> Advanced Settings Editor and choose PYFLYBY preferences tab'
-        ),
+        title: 'PYFLYBY',
+        body: 'PYFLYBY will be adding imports to the first code cell in the notebook. To disable the PYFLYBY extension or to disable this notification in future, go to Settings -> Advanced Settings Editor and choose PYFLYBY preferences tab',
         buttons: [Dialog.okButton()]
       });
       return imports;
@@ -597,10 +588,8 @@ class PyflyByWidget extends Widget {
           // interruption notice.
           this._resolvePendingTidy('interrupted');
           await showDialog({
-            title: this._trans.__('TidyImports Interrupted'),
-            body: this._trans.__(
-              'TidyImports could not be run because code in the notebook has been changed'
-            ),
+            title: 'TidyImports Interrupted',
+            body: 'TidyImports could not be run because code in the notebook has been changed',
             buttons: [Dialog.okButton()],
             defaultButton: 0
           });
@@ -717,7 +706,6 @@ class PyflyByWidget extends Widget {
 
   private _context: DocumentRegistry.IContext<INotebookModel>;
   private _sessionContext: ISessionContext;
-  private _trans: TranslationBundle;
   private _settings: ISettingRegistry.ISettings | undefined;
   private _comms: any = {};
   private _pendingTidyDone?: TidyImportsDone;
@@ -732,12 +720,11 @@ class PyflyByWidget extends Widget {
  * An extension that adds pyflyby integration to a notebook widget
  */
 class PyflyByWidgetExtension implements DocumentRegistry.WidgetExtension {
-  constructor(settingRegistry: ISettingRegistry, trans: TranslationBundle) {
+  constructor(settingRegistry: ISettingRegistry) {
     // get a reference to the settings registry
     // This is shared between all notebooks. I.e. not possible to
     // have different pyflyby settings for different notebooks
     this._settingRegistry = settingRegistry;
-    this._trans = trans;
     this._loadSettings().catch(console.error);
   }
 
@@ -757,12 +744,7 @@ class PyflyByWidgetExtension implements DocumentRegistry.WidgetExtension {
     // context, so the comms are closed while the kernel connection is open.
     let shared = this._instances.get(context);
     if (!shared) {
-      const widget = new PyflyByWidget(
-        context,
-        panel,
-        this._settingRegistry,
-        this._trans
-      );
+      const widget = new PyflyByWidget(context, panel, this._settingRegistry);
       this._instances.set(context, widget);
       shared = widget;
     }
@@ -781,7 +763,6 @@ class PyflyByWidgetExtension implements DocumentRegistry.WidgetExtension {
   }
 
   private _settingRegistry: ISettingRegistry;
-  private _trans: TranslationBundle;
   // One PyflyByWidget per notebook context, and the number of views using it.
   private _instances = new WeakMap<
     DocumentRegistry.IContext<INotebookModel>,
@@ -822,26 +803,22 @@ async function disableJupyterlabPyflyby(registry: ISettingRegistry) {
   await registry.reload('@deshaw/jupyterlab-pyflyby:plugin');
 }
 
-// Product name and shell command are deliberately not translated.
-const PYFLYBY_NAME = 'pyflyby';
-const PYFLYBY_INSTALL_COMMAND = '$ py pyflyby.install_in_ipython_config_file';
-
-const installationBody = (trans: TranslationBundle) => (
+const installationBody = (
   <div>
     <p>
-      {trans.__('To use @deshaw/jupyterlab-pyflyby,')}{' '}
+      To use @deshaw/jupyterlab-pyflyby,{' '}
       <a
         href="https://github.com/deshaw/pyflyby/blob/master/README.rst"
         style={{ color: '#0000EE' }}
         target="_blank"
         rel="noopener noreferrer"
       >
-        {PYFLYBY_NAME}
+        pyflyby
       </a>{' '}
-      {trans.__('ipython extension needs to be installed.')}
+      ipython extension needs to be installed.
     </p>
     <br />
-    <p>{trans.__('Clicking on "Install" will run following command')}</p>
+    <p>Clicking on "Install" will run following command</p>
     <div
       style={{
         font: 'monospace',
@@ -850,7 +827,7 @@ const installationBody = (trans: TranslationBundle) => (
         marginTop: '5px'
       }}
     >
-      {PYFLYBY_INSTALL_COMMAND}
+      $ py pyflyby.install_in_ipython_config_file
     </div>
     <br />
   </div>
@@ -860,17 +837,13 @@ class TidyImportButtonExtension implements DocumentRegistry.IWidgetExtension<
   NotebookPanel,
   INotebookModel
 > {
-  constructor(trans: TranslationBundle) {
-    this._trans = trans;
-  }
-
   createNew(
     widget: NotebookPanel,
     context: DocumentRegistry.IContext<INotebookModel>
   ): IDisposable {
     const button = new ToolbarButton({
       className: 'tidy-import-button',
-      tooltip: this._trans.__('Run tidy-imports on this notebook'),
+      tooltip: 'Run tidy-imports on this notebook',
       icon: TidyImportsIcon,
       onClick: () => {
         // Emit a signal with the notebook context
@@ -886,8 +859,6 @@ class TidyImportButtonExtension implements DocumentRegistry.IWidgetExtension<
       button.dispose();
     });
   }
-
-  private _trans: TranslationBundle;
 }
 
 const TidyImportsIcon = new LabIcon({
@@ -903,19 +874,15 @@ const extension: JupyterFrontEndPlugin<void> = {
     'Integrates pyflyby with JupyterLab notebooks: adds missing imports automatically and exposes a tidy-imports command.',
   autoStart: true,
   requires: [ISettingRegistry, INotebookTracker, ICommandPalette],
-  optional: [ITranslator],
   activate: async function (
     app: JupyterFrontEnd,
     registry: ISettingRegistry,
     tracker: INotebookTracker,
-    palette: ICommandPalette,
-    translator: ITranslator | null
+    palette: ICommandPalette
   ): Promise<void> {
     console.log(
       'JupyterLab extension @deshaw/jupyterlab-pyflyby is activated!'
     );
-
-    const trans = (translator ?? nullTranslator).load('jupyterlab-pyflyby');
 
     app.commands.addCommand(djsTidyImportsCommand, {
       execute: args => {
@@ -983,7 +950,7 @@ const extension: JupyterFrontEndPlugin<void> = {
         }
       },
       icon: TidyImportsIcon,
-      label: trans.__('Run tidy-imports on Notebook')
+      label: 'Run tidy-imports on Notebook'
     });
 
     palette.addItem({
@@ -1006,11 +973,11 @@ const extension: JupyterFrontEndPlugin<void> = {
           await installPyflyby();
         } else {
           const result = await showDialog({
-            title: trans.__('Installation required'),
-            body: installationBody(trans),
+            title: 'Installation required',
+            body: installationBody,
             buttons: [
               Dialog.okButton({
-                label: trans.__('Install')
+                label: 'Install'
               }),
               Dialog.cancelButton({
                 displayType: 'default'
@@ -1030,12 +997,12 @@ const extension: JupyterFrontEndPlugin<void> = {
     // Register the extensions
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new PyflyByWidgetExtension(registry, trans)
+      new PyflyByWidgetExtension(registry)
     );
 
     app.docRegistry.addWidgetExtension(
       'Notebook',
-      new TidyImportButtonExtension(trans)
+      new TidyImportButtonExtension()
     );
   }
 };
